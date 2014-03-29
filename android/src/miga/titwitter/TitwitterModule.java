@@ -109,7 +109,7 @@ public class TitwitterModule extends KrollModule {
 		}
 		
 		// shorten array
-		System.arraycopy(dList, 0, dList, 0, i);
+		System.arraycopy(dList, 0, dList, 0, i-1);
 		
 		
 		  
