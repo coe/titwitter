@@ -1,0 +1,18 @@
+#
+# this is your module manifest and used by Titanium
+# during compilation, packaging, distribution, etc.
+#
+version: 1.0
+apiversion: 2
+description: twitter api
+author: Michael Gangolf
+license: Apache License, Version 2.0
+copyright: Copyright (c) 2014 Michael Gangolf
+
+
+# these should not be edited
+name: titwitter
+moduleid: miga.titwitter
+guid: 99152242-4896-4e96-8199-d8896a7e891d
+platform: android
+minsdk: 3.2.0.GA
