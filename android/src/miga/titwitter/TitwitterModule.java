@@ -107,13 +107,17 @@ public class TitwitterModule extends KrollModule {
 		      i++;
 		    }
 		}
+		Log.d("Twitter",i+"");
+		Log.d("Twitter",dList.length+"");
+		
+		KrollDict[] dList2 = new KrollDict[i];
 		
 		// shorten array
-		System.arraycopy(dList, 0, dList, 0, i-1);
-		
+		System.arraycopy(dList, 0, dList2, 0, i);
+		Log.d("Twitter",dList2.length+"");
 		
 		  
-		event.put("tweets", dList);
+		event.put("tweets", dList2);
 		success.call(getKrollObject(), event);
 		  
                 
