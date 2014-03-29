@@ -11,7 +11,8 @@ import android.content.Context;
 import android.app.Activity;
 import twitter4j.*;
 import twitter4j.conf.ConfigurationBuilder;
-
+import java.util.Collections;
+import java.util.Comparator;
 
 import java.util.List;
 import org.appcelerator.kroll.common.Log;
@@ -24,6 +25,8 @@ public class TitwitterModule extends KrollModule {
 	AsyncTwitter twitter;
 	KrollFunction success;
 	private static final Object LOCK = new Object();
+	boolean desc = false;
+	long lastID=0;
 	
         @Override
         public void onDestroy(Activity activity) {
@@ -68,14 +71,47 @@ public class TitwitterModule extends KrollModule {
 		List<Status> tweets = result.getTweets();
 		KrollDict[] dList = new KrollDict[tweets.size()];
 		
+		
+		// sort tweets
+		Collections.sort(tweets, new Comparator<Status>() {
+		    public int compare(Status o1, Status o2) {
+		    
+			if (desc) {
+			  if (o2.getId() < o1.getId()) {
+			    return 1;
+			  } else {
+			    return -1;
+			  }
+			} else {
+			  if (o2.getId() > o1.getId()) {
+			    return 1;
+			  } else {
+			    return -1;
+			  }
+			}
+		    }
+		});
+		
+		// return tweets to titanium
 		int i=0;
 		for (Status tweet : tweets) {
-		    KrollDict d = new KrollDict();
-		    d.put("username",tweet.getUser().getScreenName());
-		    d.put("text",tweet.getText());
-		    dList[i] = d;
-		    i++;
+		    if (lastID==-1 || lastID<tweet.getId()){
+		      KrollDict d = new KrollDict();
+		      d.put("username",tweet.getUser().getScreenName());
+		      d.put("userimage",tweet.getUser().getProfileImageURL());
+		      d.put("text",tweet.getText());
+		      d.put("date",tweet.getCreatedAt());
+		      d.put("id",Long.toString(tweet.getId()));
+		      dList[i] = d;
+		      lastID = tweet.getId();
+		      i++;
+		    }
 		}
+		
+		// shorten array
+		System.arraycopy(dList, 0, dList, 0, i);
+		
+		
 		  
 		event.put("tweets", dList);
 		success.call(getKrollObject(), event);
@@ -101,7 +137,9 @@ public class TitwitterModule extends KrollModule {
       public void search(HashMap args){
 	KrollDict arg = new KrollDict(args);
 	Query query = new Query(arg.getString("query"));
+	desc = arg.optBoolean("descending",false);
 	success =(KrollFunction) arg.get("success");
+	lastID = Long.parseLong(arg.optString("lastID","-1"));
 	twitter.search(query);
       }
       
