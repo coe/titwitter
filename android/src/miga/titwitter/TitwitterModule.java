@@ -21,8 +21,9 @@ public class TitwitterModule extends KrollModule {
 	
 	Context context;
 	Activity activity;
-	Twitter twitter;
-	
+	AsyncTwitter twitter;
+	KrollFunction success;
+	private static final Object LOCK = new Object();
 	
         @Override
         public void onDestroy(Activity activity) {
@@ -55,43 +56,54 @@ public class TitwitterModule extends KrollModule {
 	
 	  ConfigurationBuilder cb = new ConfigurationBuilder();
 	  cb.setDebugEnabled(true).setOAuthConsumerKey(arg.optString("apikey", "")).setOAuthConsumerSecret(arg.optString("apisecret", "")).setOAuthAccessToken(arg.optString("accesstoken", "")).setOAuthAccessTokenSecret(arg.optString("accesssecret", ""));
-	  TwitterFactory tf = new TwitterFactory(cb.build());
+	  AsyncTwitterFactory tf = new AsyncTwitterFactory(cb.build());
 	  twitter = tf.getInstance();
-	  Log.d("Twitter","connected");
+	  
+	  twitter.addListener(new TwitterAdapter() {
+	    @Override
+            public void searched(QueryResult result) {
+                
+		
+		HashMap<String, KrollDict[]> event = new HashMap<String, KrollDict[]>();
+		List<Status> tweets = result.getTweets();
+		KrollDict[] dList = new KrollDict[tweets.size()];
+		
+		int i=0;
+		for (Status tweet : tweets) {
+		    KrollDict d = new KrollDict();
+		    d.put("username",tweet.getUser().getScreenName());
+		    d.put("text",tweet.getText());
+		    dList[i] = d;
+		    i++;
+		}
+		  
+		event.put("tweets", dList);
+		success.call(getKrollObject(), event);
+		  
+                
+                synchronized (LOCK) {
+                    LOCK.notify();
+                }
+            }
+
+            @Override
+            public void onException(TwitterException e, TwitterMethod method) {
+		  synchronized (LOCK) {
+		      LOCK.notify();
+		  }
+		  throw new AssertionError("Should not happen");
+            }
+        });
+	  Log.d("Twitter","connected");	  
 	}
       
       @Kroll.method
       public void search(HashMap args){
 	KrollDict arg = new KrollDict(args);
-	KrollFunction success =(KrollFunction) arg.get("success");
-	HashMap<String, KrollDict[]> event = new HashMap<String, KrollDict[]>();
-	
-	try {
-	      Query query = new Query(arg.getString("query"));
-	      QueryResult result;
-	  
-	      result = twitter.search(query);
-	      List<Status> tweets = result.getTweets();
-	      KrollDict[] dList = new KrollDict[tweets.size()];
-	      
-	      int i=0;
-	      for (Status tweet : tweets) {
-		  KrollDict d = new KrollDict();
-		  d.put("username",tweet.getUser().getScreenName());
-		  d.put("text",tweet.getText());
-		  dList[i] = d;
-		  i++;
-	      }
-		
-	      event.put("tweets", dList);
-	      success.call(getKrollObject(), event);
-	  } catch (TwitterException te) {
-	      
-	      Log.d("twitter","Failed to search tweets: " + te.getMessage());
-	     
-	  }
-	 
-	}
+	Query query = new Query(arg.getString("query"));
+	success =(KrollFunction) arg.get("success");
+	twitter.search(query);
+      }
       
 	
 }
