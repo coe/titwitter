@@ -20,3 +20,18 @@ twitter.search({
 twitter.search({
     query : "#titanium", success : onSearchDone, descending:true, lastID: 1000000
 });
+
+// search with date
+twitter.search({
+    query : "#titanium", success : onSearchDone, descending:true, since:"YYYY-MM-DD"
+});
+
+// search with language filter
+twitter.search({
+    query : "#titanium", success : onSearchDone, descending:true, lang:"de"
+});
+
+// search with max count
+twitter.search({
+    query : "#titanium", success : onSearchDone, descending:true, count: 10
+});

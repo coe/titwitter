@@ -11,6 +11,9 @@ import android.content.Context;
 import android.app.Activity;
 import twitter4j.*;
 import twitter4j.conf.ConfigurationBuilder;
+import twitter4j.auth.AccessToken;
+import twitter4j.auth.RequestToken;
+
 import java.util.Collections;
 import java.util.Comparator;
 
@@ -61,8 +64,17 @@ public class TitwitterModule extends KrollModule {
 	  cb.setDebugEnabled(true).setOAuthConsumerKey(arg.optString("apikey", "")).setOAuthConsumerSecret(arg.optString("apisecret", "")).setOAuthAccessToken(arg.optString("accesstoken", "")).setOAuthAccessTokenSecret(arg.optString("accesssecret", ""));
 	  AsyncTwitterFactory tf = new AsyncTwitterFactory(cb.build());
 	  twitter = tf.getInstance();
+	  	  
 	  
 	  twitter.addListener(new TwitterAdapter() {
+	    @Override 
+	    public void updatedStatus(Status status) {
+	      Log.d("Twitter","text: " + status.getText());
+	    }
+	  
+	   
+	  
+	  
 	    @Override
             public void searched(QueryResult result) {
                 
@@ -107,15 +119,11 @@ public class TitwitterModule extends KrollModule {
 		      i++;
 		    }
 		}
-		Log.d("Twitter",i+"");
-		Log.d("Twitter",dList.length+"");
 		
 		KrollDict[] dList2 = new KrollDict[i];
 		
 		// shorten array
 		System.arraycopy(dList, 0, dList2, 0, i);
-		Log.d("Twitter",dList2.length+"");
-		
 		  
 		event.put("tweets", dList2);
 		success.call(getKrollObject(), event);
@@ -125,13 +133,14 @@ public class TitwitterModule extends KrollModule {
                     LOCK.notify();
                 }
             }
-
+            
+           
             @Override
             public void onException(TwitterException e, TwitterMethod method) {
 		  synchronized (LOCK) {
 		      LOCK.notify();
 		  }
-		  throw new AssertionError("Should not happen");
+		  Log.e("twitter","error: " + e.getErrorMessage());
             }
         });
 	  Log.d("Twitter","connected");	  
@@ -141,12 +150,32 @@ public class TitwitterModule extends KrollModule {
       public void search(HashMap args){
 	KrollDict arg = new KrollDict(args);
 	Query query = new Query(arg.getString("query"));
+	query.setLang(arg.optString("lang",""));
+	query.setCount(arg.optInt("count",20));
+	if (arg.optString("since","")!="") {
+	  query.setSince(arg.getString("since"));
+	}
 	desc = arg.optBoolean("descending",false);
 	success =(KrollFunction) arg.get("success");
 	lastID = Long.parseLong(arg.optString("lastID","-1"));
 	twitter.search(query);
       }
+
       
+      @Kroll.method
+      public void post(HashMap args){
+	KrollDict arg = new KrollDict(args);
+	String str = arg.optString("text","");
+	if (str.length()>0){
+	  twitter.updateStatus(str);
+	}
+      }
+      
+      
+      @Kroll.method
+      public void shutdown(){
+	twitter.shutdown();
+      }
 	
 }
 
